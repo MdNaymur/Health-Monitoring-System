@@ -1,0 +1,71 @@
+#include <DFRobot_MAX30102.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DFRobot_DHT11.h>
+DFRobot_DHT11 DHT;
+#define DHT11_PIN D6
+
+LiquidCrystal_I2C lcd(0X27,16,2);
+
+DFRobot_MAX30102 particleSensor;
+
+void setup()
+{
+  //Init serial
+  Serial.begin(9600);
+      // Initialize the LCD
+    lcd.init();
+    // Turn on the backlight (if available)
+    lcd.backlight();
+    // Print a message
+    lcd.setCursor(0, 0);
+    lcd.print("HealthMonitoring");
+    lcd.setCursor(2, 1);
+    lcd.print("System Ready");
+ 
+  while (!particleSensor.begin()) {
+    Serial.println("MAX30102 was not found");
+    lcd.setCursor(0, 0);
+    lcd.print("Sensor Not Ready");
+    delay(1000);
+  }
+
+
+  particleSensor.sensorConfiguration(/*ledBrightness=*/50, /*sampleAverage=*/SAMPLEAVG_4, \
+                        /*ledMode=*/MODE_MULTILED, /*sampleRate=*/SAMPLERATE_100, \
+                        /*pulseWidth=*/PULSEWIDTH_411, /*adcRange=*/ADCRANGE_16384);
+}
+
+int32_t SPO2; //SPO2
+int8_t SPO2Valid; //Flag to display if SPO2 calculation is valid
+int32_t heartRate; //Heart-rate
+int8_t heartRateValid; //Flag to display if heart-rate calculation is valid 
+
+void loop()
+{
+  Serial.println(F("Wait about four seconds"));
+  particleSensor.heartrateAndOxygenSaturation(/**SPO2=*/&SPO2, /**SPO2Valid=*/&SPO2Valid, /**heartRate=*/&heartRate, /**heartRateValid=*/&heartRateValid);
+  DHT.read(DHT11_PIN);
+  float t= DHT.temperature;
+  float temp= (t*9/5)+32;
+  Serial.print(F("heartRate="));
+  Serial.print(heartRate, DEC);
+  Serial.print(F(", heartRateValid="));
+  Serial.print(heartRateValid, DEC);
+  Serial.print(F("; SPO2="));
+  Serial.print(SPO2, DEC);
+  Serial.print(F(", SPO2Valid="));
+  Serial.println(SPO2Valid, DEC);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("H.R:");
+  lcd.print(heartRate, DEC);
+  lcd.setCursor(7, 0);
+  lcd.print(" Oxy:");
+  lcd.print(SPO2, DEC);
+  lcd.print("%");
+  lcd.setCursor(0, 1);
+  lcd.print("Temp:");
+  lcd.print(temp);
+  lcd.print("F");
+}
